@@ -13,15 +13,25 @@ import { NHSTrustData } from '@/types/nhs-data';
 
 interface AverageWaitChartProps {
   data: NHSTrustData[];
+  selectedSpecialty?: string;
 }
 
-export function AverageWaitChart({ data }: AverageWaitChartProps) {
+export function AverageWaitChart({ data, selectedSpecialty = 'trust_total' }: AverageWaitChartProps) {
+  // Build field name based on selected specialty
+  const getFieldName = (suffix: string) => {
+    return selectedSpecialty === 'trust_total'
+      ? `trust_total_${suffix}`
+      : `rtt_${selectedSpecialty}_${suffix}`;
+  };
+
+  const medianWaitField = getFieldName('median_wait_weeks');
+
   const chartData = data.map(record => ({
     period: new Date(record.period).toLocaleDateString('en-GB', {
       month: 'short',
       year: 'numeric'
     }),
-    medianWait: record.trust_total_median_wait_weeks || 0
+    medianWait: record[medianWaitField] || 0
   }));
 
   const maxWait = Math.max(...chartData.map(d => d.medianWait));

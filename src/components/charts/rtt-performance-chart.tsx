@@ -14,15 +14,27 @@ import { NHSTrustData } from '@/types/nhs-data';
 
 interface RTTPerformanceChartProps {
   data: NHSTrustData[];
+  selectedSpecialty?: string;
 }
 
-export function RTTPerformanceChart({ data }: RTTPerformanceChartProps) {
+export function RTTPerformanceChart({ data, selectedSpecialty = 'trust_total' }: RTTPerformanceChartProps) {
+  // Build field name based on selected specialty
+  const getFieldName = (suffix: string) => {
+    return selectedSpecialty === 'trust_total'
+      ? `trust_total_${suffix}`
+      : `rtt_${selectedSpecialty}_${suffix}`;
+  };
+
+  const complianceField = getFieldName('percent_within_18_weeks');
+
   const chartData = data.map(record => ({
     period: new Date(record.period).toLocaleDateString('en-GB', {
       month: 'short',
       year: 'numeric'
     }),
-    compliance: record.trust_total_percent_within_18_weeks, // Already stored as percentage
+    compliance: selectedSpecialty === 'trust_total'
+      ? record[complianceField] // Trust total is already percentage
+      : record[complianceField] * 100, // Specialty data is decimal, convert to percentage
     target: 92
   }));
 

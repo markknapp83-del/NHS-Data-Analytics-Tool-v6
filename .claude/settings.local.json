@@ -8,7 +8,15 @@
       "Bash(git remote add:*)",
       "Bash(git add:*)",
       "Bash(git pull:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(awk:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(del verify-rtt-data.js validate-component-logic.js nhs-rtt-standards-check.js)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

@@ -10,6 +10,9 @@ import { rankDiagnosticsByOpportunity } from '@/lib/diagnostic-intelligence';
 import { EnhancedDiagnosticCard } from '@/components/dashboard/enhanced-diagnostic-card';
 import { DiagnosticBreachChart } from '@/components/charts/diagnostic-breach-chart';
 import { DiagnosticScatterChart } from '@/components/charts/diagnostic-scatter-chart';
+import { EnhancedKPICard } from '@/components/dashboard/enhanced-kpi-card';
+import { calculateTrend, findPreviousMonthData } from '@/lib/trend-calculator';
+import { Users, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
 
 export default function DiagnosticsPage() {
   const { getTrustData, isLoading } = useNHSData();
@@ -22,6 +25,10 @@ export default function DiagnosticsPage() {
     const latestData = trustData[trustData.length - 1];
     const services = extractDiagnosticData(latestData);
     return rankDiagnosticsByOpportunity(services);
+  }, [trustData]);
+
+  const previousMonthData = useMemo(() => {
+    return findPreviousMonthData(trustData);
   }, [trustData]);
 
   if (isLoading) {
@@ -86,9 +93,17 @@ export default function DiagnosticsPage() {
             Waiting times and breach analysis across all diagnostic modalities - ranked by insourcing opportunity
           </p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {diagnosticServices.length} diagnostic services monitored
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            Latest Data: {new Date(latestData.period).toLocaleDateString('en-GB', {
+              month: 'long',
+              year: 'numeric'
+            })}
+          </Badge>
+          <Badge variant="secondary" className="text-sm">
+            {diagnosticServices.length} services monitored
+          </Badge>
+        </div>
       </div>
 
       {/* Dynamic KPI Cards */}
@@ -109,41 +124,92 @@ export default function DiagnosticsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-slate-800">
-                {displayData.totalWaiting.toLocaleString()}
-              </div>
-              <div className="text-sm text-slate-600">Total Patients Waiting</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="Total Patients Waiting"
+            value={displayData.totalWaiting}
+            previousValue={previousMonthData ?
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.totalWaiting :
+                extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.totalWaiting, 0)
+              : undefined
+            }
+            symbol={Users}
+            format="number"
+            description="Patients awaiting diagnostics"
+            trend={previousMonthData ? calculateTrend(
+              displayData.totalWaiting,
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.totalWaiting || 0 :
+                extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.totalWaiting, 0),
+              false
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {displayData.sixWeekBreaches.toLocaleString()}
-              </div>
-              <div className="text-sm text-slate-600">6+ Week Breaches</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="6+ Week Breaches"
+            value={displayData.sixWeekBreaches}
+            previousValue={previousMonthData ?
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.sixWeekBreaches :
+                extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.sixWeekBreaches, 0)
+              : undefined
+            }
+            symbol={Clock}
+            format="number"
+            description="Patients waiting 6+ weeks"
+            trend={previousMonthData ? calculateTrend(
+              displayData.sixWeekBreaches,
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.sixWeekBreaches || 0 :
+                extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.sixWeekBreaches, 0),
+              false
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-red-600">
-                {displayData.thirteenWeekBreaches.toLocaleString()}
-              </div>
-              <div className="text-sm text-slate-600">13+ Week Breaches</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="13+ Week Breaches"
+            value={displayData.thirteenWeekBreaches}
+            previousValue={previousMonthData ?
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.thirteenWeekBreaches :
+                extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.thirteenWeekBreaches, 0)
+              : undefined
+            }
+            symbol={AlertTriangle}
+            format="number"
+            description="Patients waiting 13+ weeks"
+            trend={previousMonthData ? calculateTrend(
+              displayData.thirteenWeekBreaches,
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.thirteenWeekBreaches || 0 :
+                extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.thirteenWeekBreaches, 0),
+              false
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-6 text-center">
-              <div className="text-2xl font-bold text-red-600">
-                {displayData.breachRate.toFixed(1)}%
-              </div>
-              <div className="text-sm text-slate-600">Overall Breach Rate</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="Overall Breach Rate"
+            value={displayData.breachRate}
+            previousValue={previousMonthData ?
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.breachRate :
+                ((extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.sixWeekBreaches, 0) /
+                  extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.totalWaiting, 0)) * 100)
+              : undefined
+            }
+            symbol={TrendingUp}
+            format="percentage"
+            target={1}
+            description="6+ week breach rate"
+            trend={previousMonthData ? calculateTrend(
+              displayData.breachRate,
+              selectedServiceData ?
+                extractDiagnosticData(previousMonthData).find(s => s.type === selectedService)?.breachRate || 0 :
+                ((extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.sixWeekBreaches, 0) /
+                  extractDiagnosticData(previousMonthData).reduce((sum, s) => sum + s.totalWaiting, 0)) * 100),
+              false
+            ) : undefined}
+          />
         </div>
       </div>
 

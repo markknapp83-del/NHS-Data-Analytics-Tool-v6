@@ -1,20 +1,32 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useNHSData } from '@/hooks/use-nhs-data';
 import { useTrustSelection } from '@/hooks/use-trust-selection';
-import { Building2, Bed, Users } from 'lucide-react';
+import { Building2, Bed, Users, Activity, Clock, Stethoscope, BarChart3 } from 'lucide-react';
 import { AEPerformanceTrendChart } from '@/components/charts/ae-performance-trend-chart';
 import { VirtualWardChart } from '@/components/charts/virtual-ward-chart';
 import { FlowCorrelationChart } from '@/components/charts/flow-correlation-chart';
 import { DischargePatternChart } from '@/components/charts/discharge-pattern-chart';
+import { EnhancedKPICard } from '@/components/dashboard/enhanced-kpi-card';
+import { calculateTrend, findPreviousMonthData } from '@/lib/trend-calculator';
 
 export default function CapacityFlowPage() {
   const { getTrustData, isLoading } = useNHSData();
   const [selectedTrust] = useTrustSelection();
   const trustData = getTrustData(selectedTrust);
+
+  // All hooks must be called before any conditional returns
+  const previousMonthVWData = useMemo(() => {
+    return findPreviousMonthData(trustData);
+  }, [trustData]);
+
+  const previousMonthAEData = useMemo(() => {
+    return findPreviousMonthData(trustData);
+  }, [trustData]);
 
   if (isLoading) {
     return (
@@ -53,7 +65,16 @@ export default function CapacityFlowPage() {
     record.ae_attendances_total !== undefined
   );
 
-  const latestData = latestDataWithAE || trustData[trustData.length - 1];
+  // Find the latest record that has Virtual Ward data
+  const latestDataWithVW = [...trustData].reverse().find(record =>
+    record.virtual_ward_occupancy_rate !== null &&
+    record.virtual_ward_occupancy_rate !== undefined &&
+    record.virtual_ward_capacity !== null &&
+    record.virtual_ward_capacity !== undefined
+  );
+
+  const latestAEData = latestDataWithAE || trustData[trustData.length - 1];
+  const latestVWData = latestDataWithVW || trustData[trustData.length - 1];
 
   return (
     <div className="p-6 space-y-6">
@@ -69,35 +90,58 @@ export default function CapacityFlowPage() {
 
       {/* Virtual Ward KPI Cards */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Virtual Ward Capacity</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Virtual Ward Capacity</h2>
+          <Badge variant="outline" className="text-sm">
+            Latest Data: {new Date(latestVWData.period).toLocaleDateString('en-GB', {
+              month: 'long',
+              year: 'numeric'
+            })}
+          </Badge>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-xl font-bold">
-                {latestData.virtual_ward_capacity || 'N/A'}
-              </div>
-              <div className="text-xs text-slate-600">Virtual Ward Beds</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="Virtual Ward Beds"
+            value={latestVWData.virtual_ward_capacity || 0}
+            previousValue={previousMonthVWData?.virtual_ward_capacity}
+            symbol={Bed}
+            format="number"
+            description="Total virtual ward capacity"
+            trend={previousMonthVWData ? calculateTrend(
+              latestVWData.virtual_ward_capacity || 0,
+              previousMonthVWData.virtual_ward_capacity || 0,
+              true
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-xl font-bold text-blue-600">
-                {latestData.virtual_ward_occupancy_rate?.toFixed(1)}%
-              </div>
-              <div className="text-xs text-slate-600">VW Occupancy</div>
-              <div className="text-xs text-slate-500">Target: 85%</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="VW Occupancy Rate"
+            value={(latestVWData.virtual_ward_occupancy_rate || 0) * 100}
+            previousValue={previousMonthVWData ? (previousMonthVWData.virtual_ward_occupancy_rate || 0) * 100 : undefined}
+            symbol={BarChart3}
+            format="percentage"
+            target={85}
+            description="Virtual ward utilization"
+            trend={previousMonthVWData ? calculateTrend(
+              (latestVWData.virtual_ward_occupancy_rate || 0) * 100,
+              (previousMonthVWData.virtual_ward_occupancy_rate || 0) * 100,
+              true
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-xl font-bold">
-                {latestData.avg_daily_discharges?.toFixed(0)}
-              </div>
-              <div className="text-xs text-slate-600">Daily Discharges</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="Occupied Beds"
+            value={Math.round((latestVWData.virtual_ward_occupancy_rate || 0) * (latestVWData.virtual_ward_capacity || 0))}
+            previousValue={previousMonthVWData ? Math.round((previousMonthVWData.virtual_ward_occupancy_rate || 0) * (previousMonthVWData.virtual_ward_capacity || 0)) : undefined}
+            symbol={Activity}
+            format="number"
+            description="Currently occupied virtual ward beds"
+            trend={previousMonthVWData ? calculateTrend(
+              Math.round((latestVWData.virtual_ward_occupancy_rate || 0) * (latestVWData.virtual_ward_capacity || 0)),
+              Math.round((previousMonthVWData.virtual_ward_occupancy_rate || 0) * (previousMonthVWData.virtual_ward_capacity || 0)),
+              false
+            ) : undefined}
+          />
         </div>
       </div>
 
@@ -114,11 +158,11 @@ export default function CapacityFlowPage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium">Occupancy Rate</span>
                   <span className="text-sm text-slate-600">
-                    {((latestData.virtual_ward_occupancy_rate || 0) * 100).toFixed(1)}% / 85% optimal
+                    {((latestVWData.virtual_ward_occupancy_rate || 0) * 100).toFixed(1)}% / 85% optimal
                   </span>
                 </div>
                 <Progress
-                  value={Math.min((latestData.virtual_ward_occupancy_rate || 0) * 100, 100)}
+                  value={Math.min((latestVWData.virtual_ward_occupancy_rate || 0) * 100, 100)}
                   className="h-3"
                 />
                 <div className="flex justify-between text-xs text-slate-500 mt-1">
@@ -130,11 +174,11 @@ export default function CapacityFlowPage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium">Bed Utilization</span>
                   <span className="text-sm text-slate-600">
-                    {Math.round((latestData.virtual_ward_occupancy_rate || 0) * (latestData.virtual_ward_capacity || 0))} occupied
+                    {Math.round((latestVWData.virtual_ward_occupancy_rate || 0) * (latestVWData.virtual_ward_capacity || 0))} occupied
                   </span>
                 </div>
                 <div className="text-2xl font-bold text-[#005eb8]">
-                  {latestData.virtual_ward_capacity || 0} total beds
+                  {latestVWData.virtual_ward_capacity || 0} total beds
                 </div>
               </div>
             </div>
@@ -142,20 +186,34 @@ export default function CapacityFlowPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 bg-slate-50 rounded-lg">
                 <h4 className="font-medium text-slate-700 mb-1">Available Beds</h4>
-                <p className="text-xl font-bold text-green-600">
-                  {Math.round((latestData.virtual_ward_capacity || 0) * (1 - (latestData.virtual_ward_occupancy_rate || 0)))}
-                </p>
+                {(() => {
+                  const availableBeds = Math.round((latestVWData.virtual_ward_capacity || 0) * (1 - (latestVWData.virtual_ward_occupancy_rate || 0)));
+                  const isOverCapacity = availableBeds < 0;
+
+                  return (
+                    <div>
+                      <p className={`text-xl font-bold ${isOverCapacity ? 'text-red-600' : 'text-green-600'}`}>
+                        {isOverCapacity ? Math.abs(availableBeds) : availableBeds}
+                      </p>
+                      {isOverCapacity && (
+                        <p className="text-xs text-red-600 font-medium mt-1">
+                          beds over capacity
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-medium text-slate-700 mb-1">Daily Turnover</h4>
+                <h4 className="font-medium text-slate-700 mb-1">Occupied Beds</h4>
                 <p className="text-xl font-bold text-blue-600">
-                  {latestData.avg_daily_discharges?.toFixed(1) || '0'}
+                  {Math.round((latestVWData.virtual_ward_occupancy_rate || 0) * (latestVWData.virtual_ward_capacity || 0))}
                 </p>
               </div>
               <div className="p-4 bg-slate-50 rounded-lg">
-                <h4 className="font-medium text-slate-700 mb-1">Efficiency Rate</h4>
+                <h4 className="font-medium text-slate-700 mb-1">Utilization Rate</h4>
                 <p className="text-xl font-bold text-purple-600">
-                  {((latestData.avg_daily_discharges || 0) / (latestData.virtual_ward_capacity || 1) * 100).toFixed(1)}%
+                  {((latestVWData.virtual_ward_occupancy_rate || 0) * 100).toFixed(1)}%
                 </p>
               </div>
             </div>
@@ -190,52 +248,73 @@ export default function CapacityFlowPage() {
 
       {/* A&E Performance KPI Cards */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Emergency Department Performance</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Emergency Department Performance</h2>
+          <Badge variant="outline" className="text-sm">
+            Latest Data: {new Date(latestAEData.period).toLocaleDateString('en-GB', {
+              month: 'long',
+              year: 'numeric'
+            })}
+          </Badge>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-xl font-bold text-red-600">
-                {latestData.ae_4hr_performance_pct !== null && latestData.ae_4hr_performance_pct !== undefined
-                  ? `${latestData.ae_4hr_performance_pct.toFixed(1)}%`
-                  : 'N/A'}
-              </div>
-              <div className="text-xs text-slate-600">4-Hour Performance</div>
-              <div className="text-xs text-slate-500">Target: 95%</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="4-Hour Performance"
+            value={latestAEData.ae_4hr_performance_pct || 0}
+            previousValue={previousMonthAEData?.ae_4hr_performance_pct}
+            symbol={Clock}
+            format="percentage"
+            target={95}
+            description="4-hour A&E standard"
+            trend={previousMonthAEData ? calculateTrend(
+              latestAEData.ae_4hr_performance_pct || 0,
+              previousMonthAEData.ae_4hr_performance_pct || 0,
+              true
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-xl font-bold">
-                {latestData.ae_attendances_total !== null && latestData.ae_attendances_total !== undefined
-                  ? latestData.ae_attendances_total.toLocaleString()
-                  : 'N/A'}
-              </div>
-              <div className="text-xs text-slate-600">Total Attendances</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="Total Attendances"
+            value={latestAEData.ae_attendances_total || 0}
+            previousValue={previousMonthAEData?.ae_attendances_total}
+            symbol={Users}
+            format="number"
+            description="Monthly A&E attendances"
+            trend={previousMonthAEData ? calculateTrend(
+              latestAEData.ae_attendances_total || 0,
+              previousMonthAEData.ae_attendances_total || 0,
+              false
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-xl font-bold text-orange-600">
-                {latestData.ae_over_4hrs_total !== null && latestData.ae_over_4hrs_total !== undefined
-                  ? latestData.ae_over_4hrs_total.toLocaleString()
-                  : 'N/A'}
-              </div>
-              <div className="text-xs text-slate-600">Over 4 Hours</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="Over 4 Hours"
+            value={latestAEData.ae_over_4hrs_total || 0}
+            previousValue={previousMonthAEData?.ae_over_4hrs_total}
+            symbol={Clock}
+            format="number"
+            description="Patients breaching 4-hour target"
+            trend={previousMonthAEData ? calculateTrend(
+              latestAEData.ae_over_4hrs_total || 0,
+              previousMonthAEData.ae_over_4hrs_total || 0,
+              false
+            ) : undefined}
+          />
 
-          <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-xl font-bold text-red-600">
-                {latestData.ae_12hr_wait_admissions !== null && latestData.ae_12hr_wait_admissions !== undefined
-                  ? latestData.ae_12hr_wait_admissions.toLocaleString()
-                  : 'N/A'}
-              </div>
-              <div className="text-xs text-slate-600">12-Hour Waits</div>
-            </CardContent>
-          </Card>
+          <EnhancedKPICard
+            title="12-Hour Waits"
+            value={latestAEData.ae_12hr_wait_admissions || 0}
+            previousValue={previousMonthAEData?.ae_12hr_wait_admissions}
+            symbol={Stethoscope}
+            format="number"
+            target={0}
+            description="12-hour wait admissions"
+            trend={previousMonthAEData ? calculateTrend(
+              latestAEData.ae_12hr_wait_admissions || 0,
+              previousMonthAEData.ae_12hr_wait_admissions || 0,
+              false
+            ) : undefined}
+          />
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNHSData } from '@/hooks/use-nhs-data';
@@ -8,12 +8,42 @@ import { useTrustSelection } from '@/hooks/use-trust-selection';
 import { AlertTriangle } from 'lucide-react';
 import { RTTTrendsTab } from '@/components/dashboard/rtt-trends-tab';
 import { SpecialtyAnalysisTab } from '@/components/dashboard/specialty-analysis-tab';
+import { RTTFilters } from '@/components/dashboard/rtt-filters';
 
 export default function RTTDeepDivePage() {
   const { getTrustData, isLoading } = useNHSData();
   const [selectedTrust] = useTrustSelection();
   const [selectedSpecialty, setSelectedSpecialty] = useState<string>('trust_total');
+  const [selectedDateRange, setSelectedDateRange] = useState<string>('all');
   const trustData = getTrustData(selectedTrust);
+
+  // Generate available date ranges from the data
+  const availableDateRanges = useMemo(() => {
+    if (!trustData.length) return [];
+
+    const ranges = [
+      { value: 'all', label: 'All Available Data' },
+      { value: 'last12', label: 'Last 12 Months' },
+      { value: 'last6', label: 'Last 6 Months' },
+      { value: 'last3', label: 'Last 3 Months' }
+    ];
+
+    return ranges;
+  }, [trustData]);
+
+  // Filter data based on selected date range
+  const filteredData = useMemo(() => {
+    if (!trustData.length || selectedDateRange === 'all') return trustData;
+
+    const months = {
+      last12: 12,
+      last6: 6,
+      last3: 3
+    };
+
+    const monthsToShow = months[selectedDateRange as keyof typeof months] || 12;
+    return trustData.slice(-monthsToShow);
+  }, [trustData, selectedDateRange]);
 
   if (isLoading) {
     return (
@@ -44,10 +74,10 @@ export default function RTTDeepDivePage() {
     );
   }
 
-  const latestData = trustData[trustData.length - 1];
+  const latestData = filteredData[filteredData.length - 1] || trustData[trustData.length - 1];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -55,7 +85,7 @@ export default function RTTDeepDivePage() {
           <p className="text-slate-600">Comprehensive Referral to Treatment performance analysis</p>
         </div>
         <Badge variant="outline" className="text-sm">
-          Data: {new Date(latestData.period).toLocaleDateString('en-GB', {
+          Latest Data: {new Date(latestData.period).toLocaleDateString('en-GB', {
             month: 'long',
             year: 'numeric'
           })}
@@ -63,14 +93,26 @@ export default function RTTDeepDivePage() {
       </div>
 
       {/* Tabbed Interface */}
-      <Tabs defaultValue="trends" className="space-y-6">
+      <Tabs defaultValue="trends" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="trends">Performance Trends</TabsTrigger>
           <TabsTrigger value="specialties">Specialty Analysis</TabsTrigger>
         </TabsList>
 
+        {/* Filters - positioned between tabs and content */}
+        <RTTFilters
+          selectedSpecialty={selectedSpecialty}
+          onSpecialtyChange={setSelectedSpecialty}
+          selectedDateRange={selectedDateRange}
+          onDateRangeChange={setSelectedDateRange}
+          availableDateRanges={availableDateRanges}
+        />
+
         <TabsContent value="trends">
-          <RTTTrendsTab />
+          <RTTTrendsTab
+            selectedSpecialty={selectedSpecialty}
+            filteredData={filteredData}
+          />
         </TabsContent>
 
         <TabsContent value="specialties">

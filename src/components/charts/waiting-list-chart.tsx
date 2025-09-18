@@ -13,17 +13,28 @@ import { NHSTrustData } from '@/types/nhs-data';
 
 interface WaitingListChartProps {
   data: NHSTrustData[];
+  selectedSpecialty?: string;
 }
 
-export function WaitingListChart({ data }: WaitingListChartProps) {
+export function WaitingListChart({ data, selectedSpecialty = 'trust_total' }: WaitingListChartProps) {
+  // Build field names based on selected specialty
+  const getFieldName = (suffix: string) => {
+    return selectedSpecialty === 'trust_total'
+      ? `trust_total_${suffix}`
+      : `rtt_${selectedSpecialty}_${suffix}`;
+  };
+
+  const totalPathwaysField = getFieldName('total_incomplete_pathways');
+  const within18WeeksField = getFieldName('total_within_18_weeks');
+
   const chartData = data.map(record => ({
     period: new Date(record.period).toLocaleDateString('en-GB', {
       month: 'short',
       year: 'numeric'
     }),
-    totalWaiting: record.trust_total_total_incomplete_pathways || 0,
-    within18Weeks: record.trust_total_total_within_18_weeks || 0,
-    over18Weeks: (record.trust_total_total_incomplete_pathways || 0) - (record.trust_total_total_within_18_weeks || 0)
+    totalWaiting: record[totalPathwaysField] || 0,
+    within18Weeks: record[within18WeeksField] || 0,
+    over18Weeks: (record[totalPathwaysField] || 0) - (record[within18WeeksField] || 0)
   }));
 
   return (

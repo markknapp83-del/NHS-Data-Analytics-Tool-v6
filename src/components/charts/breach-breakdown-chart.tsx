@@ -14,17 +14,29 @@ import { NHSTrustData } from '@/types/nhs-data';
 
 interface BreachBreakdownChartProps {
   data: NHSTrustData[];
+  selectedSpecialty?: string;
 }
 
-export function BreachBreakdownChart({ data }: BreachBreakdownChartProps) {
+export function BreachBreakdownChart({ data, selectedSpecialty = 'trust_total' }: BreachBreakdownChartProps) {
+  // Build field names based on selected specialty
+  const getFieldName = (suffix: string) => {
+    return selectedSpecialty === 'trust_total'
+      ? `trust_total_${suffix}`
+      : `rtt_${selectedSpecialty}_${suffix}`;
+  };
+
+  const weeks52Field = getFieldName('total_52_plus_weeks');
+  const weeks65Field = getFieldName('total_65_plus_weeks');
+  const weeks78Field = getFieldName('total_78_plus_weeks');
+
   const chartData = data.map(record => ({
     period: new Date(record.period).toLocaleDateString('en-GB', {
       month: 'short',
       year: 'numeric'
     }),
-    '52+ weeks': record.trust_total_total_52_plus_weeks || 0,
-    '65+ weeks': record.trust_total_total_65_plus_weeks || 0,
-    '78+ weeks': record.trust_total_total_78_plus_weeks || 0
+    '52+ weeks': record[weeks52Field] || 0,
+    '65+ weeks': record[weeks65Field] || 0,
+    '78+ weeks': record[weeks78Field] || 0
   }));
 
   return (
