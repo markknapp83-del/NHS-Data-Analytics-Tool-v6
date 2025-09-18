@@ -106,7 +106,7 @@ export function calculateTrend(current: number | null, previous: number | null):
   percentage: number;
   isPositive: boolean;
 } {
-  if (!current || !previous) {
+  if (current === null || current === undefined || previous === null || previous === undefined) {
     return { trend: 'stable', percentage: 0, isPositive: false };
   }
 

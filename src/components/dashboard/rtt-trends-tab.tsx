@@ -24,22 +24,34 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
     return <div>Loading trust data...</div>;
   }
 
+  // Build field names based on selected specialty
+  const getFieldName = (suffix: string) => {
+    return selectedSpecialty === 'trust_total'
+      ? `trust_total_${suffix}`
+      : `rtt_${selectedSpecialty}_${suffix}`;
+  };
+
+  const complianceField = getFieldName('percent_within_18_weeks');
+  const waitingListField = getFieldName('total_incomplete_pathways');
+  const weekWaitersField = getFieldName('total_52_plus_weeks');
+  const medianWaitField = getFieldName('median_wait_weeks');
+
   // Find the latest record that has complete data
   const latestDataComplete = [...trustData].reverse().find(record =>
-    (record.trust_total_percent_within_18_weeks !== null && record.trust_total_percent_within_18_weeks !== undefined)
+    (record[complianceField] !== null && record[complianceField] !== undefined)
   );
 
   const latestData = latestDataComplete || trustData[trustData.length - 1];
 
   // Find previous record with complete data for trend calculation
   const previousDataComplete = [...trustData].reverse().slice(1).find(record =>
-    (record.trust_total_percent_within_18_weeks !== null && record.trust_total_percent_within_18_weeks !== undefined)
+    (record[complianceField] !== null && record[complianceField] !== undefined)
   );
 
   const previousData = previousDataComplete;
 
   const calculateTrend = (current: number, previous: number) => {
-    if (!previous) return { change: 0, direction: 'neutral' as const };
+    if (previous === null || previous === undefined) return { change: 0, direction: 'neutral' as const };
     const change = ((current - previous) / previous) * 100;
     return {
       change: Math.abs(change),
@@ -67,8 +79,8 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
   const kpiCards = [
     {
       title: 'RTT 18-week Compliance',
-      value: latestData.trust_total_percent_within_18_weeks,
-      previousValue: previousData?.trust_total_percent_within_18_weeks,
+      value: latestData[complianceField],
+      previousValue: previousData?.[complianceField],
       target: 92,
       format: 'percentage',
       description: 'Target: 92%',
@@ -76,8 +88,8 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
     },
     {
       title: '52+ Week Waiters',
-      value: latestData.trust_total_total_52_plus_weeks,
-      previousValue: previousData?.trust_total_total_52_plus_weeks,
+      value: latestData[weekWaitersField],
+      previousValue: previousData?.[weekWaitersField],
       target: 0,
       format: 'number',
       description: 'Should be zero',
@@ -85,15 +97,15 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
     },
     {
       title: 'Total Waiting List',
-      value: latestData.trust_total_total_incomplete_pathways,
-      previousValue: previousData?.trust_total_total_incomplete_pathways,
+      value: latestData[waitingListField],
+      previousValue: previousData?.[waitingListField],
       format: 'number',
       description: 'All incomplete RTT pathways'
     },
     {
       title: 'Median Wait Time', // NEW - replaces A&E 4-hour Performance
-      value: latestData.trust_total_median_wait_weeks,
-      previousValue: previousData?.trust_total_median_wait_weeks,
+      value: latestData[medianWaitField],
+      previousValue: previousData?.[medianWaitField],
       format: 'weeks',
       description: 'Median waiting time in weeks',
       target: 9 // 18 weeks / 2 as rough target
@@ -118,7 +130,9 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
                   <div className="flex items-baseline gap-2">
                     <p className={`text-2xl font-bold ${performanceColor}`}>
                       {kpi.format === 'percentage'
-                        ? `${kpi.value?.toFixed(1)}%`
+                        ? selectedSpecialty === 'trust_total'
+                          ? `${kpi.value?.toFixed(1)}%`
+                          : `${(kpi.value * 100)?.toFixed(1)}%`
                         : kpi.format === 'weeks'
                         ? `${kpi.value?.toFixed(1)} weeks`
                         : kpi.value?.toLocaleString() || '0'
@@ -149,7 +163,7 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
             <CardDescription>RTT 18-week compliance over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <RTTPerformanceChart data={trustData} />
+            <RTTPerformanceChart data={trustData} selectedSpecialty={selectedSpecialty} />
           </CardContent>
         </Card>
 
@@ -159,7 +173,7 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
             <CardDescription>Total incomplete pathways by month</CardDescription>
           </CardHeader>
           <CardContent>
-            <WaitingListChart data={trustData} />
+            <WaitingListChart data={trustData} selectedSpecialty={selectedSpecialty} />
           </CardContent>
         </Card>
 
@@ -169,7 +183,7 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
             <CardDescription>Mean waiting time with trend analysis</CardDescription>
           </CardHeader>
           <CardContent>
-            <AverageWaitChart data={trustData} />
+            <AverageWaitChart data={trustData} selectedSpecialty={selectedSpecialty} />
           </CardContent>
         </Card>
 
@@ -179,7 +193,7 @@ export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }
             <CardDescription>Long wait breach categories over time</CardDescription>
           </CardHeader>
           <CardContent>
-            <BreachBreakdownChart data={trustData} />
+            <BreachBreakdownChart data={trustData} selectedSpecialty={selectedSpecialty} />
           </CardContent>
         </Card>
       </div>

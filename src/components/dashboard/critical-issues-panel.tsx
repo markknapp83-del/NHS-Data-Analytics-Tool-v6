@@ -70,11 +70,11 @@ function CriticalIssueCard({ issue }: { issue: CriticalIssue }) {
           <p className="text-sm text-slate-600 mb-2">{issue.description}</p>
           <div className="flex items-center gap-4 text-sm">
             <span className="font-medium">
-              {issue.metric}: {typeof issue.value === 'number' && issue.metric.includes('Rate') ? `${issue.value}%` : issue.value}
+              {issue.metric}: {typeof issue.value === 'number' && (issue.metric.includes('Rate') || issue.metric.includes('Compliance') || issue.metric.includes('Performance')) ? `${issue.value}%` : issue.value}
             </span>
             {issue.target && (
               <span className="text-slate-500">
-                Target: {typeof issue.target === 'number' && issue.metric.includes('Rate') ? `${issue.target}%` : issue.target}
+                Target: {typeof issue.target === 'number' && (issue.metric.includes('Rate') || issue.metric.includes('Compliance') || issue.metric.includes('Performance')) ? `${issue.target}%` : issue.target}
               </span>
             )}
           </div>

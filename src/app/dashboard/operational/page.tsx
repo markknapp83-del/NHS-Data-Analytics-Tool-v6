@@ -18,9 +18,29 @@ export default function OperationalPage() {
   const trustData = getTrustData(selectedTrust);
 
   // All hooks must be called before any conditional returns
-  const previousMonthData = useMemo(() => {
-    return findPreviousMonthData(trustData);
+  const aeData = useMemo(() => {
+    // Find the latest record that has A&E data
+    const latestDataWithAE = [...trustData].reverse().find(record =>
+      record.ae_4hr_performance_pct !== null &&
+      record.ae_4hr_performance_pct !== undefined &&
+      record.ae_attendances_total !== null &&
+      record.ae_attendances_total !== undefined
+    );
+
+    // Find previous record with A&E data for trend calculation
+    const reversedData = [...trustData].reverse();
+    const latestIndex = latestDataWithAE ? reversedData.findIndex(record => record.period === latestDataWithAE.period) : -1;
+    const previousDataWithAE = latestIndex >= 0 ? reversedData.slice(latestIndex + 1).find(record =>
+      record.ae_4hr_performance_pct !== null &&
+      record.ae_4hr_performance_pct !== undefined &&
+      record.ae_attendances_total !== null &&
+      record.ae_attendances_total !== undefined
+    ) : null;
+
+    return { latest: latestDataWithAE, previous: previousDataWithAE };
   }, [trustData]);
+
+  const previousMonthData = aeData.previous;
 
   if (isLoading) {
     return (
@@ -51,25 +71,8 @@ export default function OperationalPage() {
     );
   }
 
-  // Find the latest record that has A&E data
-  const latestDataWithAE = [...trustData].reverse().find(record =>
-    record.ae_4hr_performance_pct !== null &&
-    record.ae_4hr_performance_pct !== undefined &&
-    record.ae_attendances_total !== null &&
-    record.ae_attendances_total !== undefined
-  );
-
-  const latestData = latestDataWithAE || trustData[trustData.length - 1];
-
-  // Find previous record with A&E data for trend calculation
-  const previousDataWithAE = [...trustData].reverse().slice(1).find(record =>
-    record.ae_4hr_performance_pct !== null &&
-    record.ae_4hr_performance_pct !== undefined &&
-    record.ae_attendances_total !== null &&
-    record.ae_attendances_total !== undefined
-  );
-
-  const previousData = previousDataWithAE;
+  const latestData = aeData.latest || trustData[trustData.length - 1];
+  const previousData = aeData.previous;
 
 
   // Diagnostics types - simplified list based on common NHS diagnostics

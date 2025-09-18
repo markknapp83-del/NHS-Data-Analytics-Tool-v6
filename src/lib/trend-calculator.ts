@@ -9,7 +9,11 @@ export function calculateTrend(
   previous: number,
   higherIsBetter: boolean = true
 ): TrendData | null {
-  if (!previous || previous === 0 || !current || current === 0) {
+  if (previous === null || previous === undefined || current === null || current === undefined) {
+    return null;
+  }
+
+  if (previous === 0) {
     return null;
   }
 

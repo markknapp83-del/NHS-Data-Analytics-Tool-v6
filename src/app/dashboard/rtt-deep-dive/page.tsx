@@ -85,7 +85,7 @@ export default function RTTDeepDivePage() {
           <p className="text-slate-600">Comprehensive Referral to Treatment performance analysis</p>
         </div>
         <Badge variant="outline" className="text-sm">
-          Data: {new Date(latestData.period).toLocaleDateString('en-GB', {
+          Latest Data: {new Date(latestData.period).toLocaleDateString('en-GB', {
             month: 'long',
             year: 'numeric'
           })}

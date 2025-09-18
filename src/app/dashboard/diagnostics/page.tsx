@@ -93,9 +93,17 @@ export default function DiagnosticsPage() {
             Waiting times and breach analysis across all diagnostic modalities - ranked by insourcing opportunity
           </p>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {diagnosticServices.length} diagnostic services monitored
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-sm">
+            Latest Data: {new Date(latestData.period).toLocaleDateString('en-GB', {
+              month: 'long',
+              year: 'numeric'
+            })}
+          </Badge>
+          <Badge variant="secondary" className="text-sm">
+            {diagnosticServices.length} services monitored
+          </Badge>
+        </div>
       </div>
 
       {/* Dynamic KPI Cards */}

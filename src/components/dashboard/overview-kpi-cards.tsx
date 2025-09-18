@@ -30,21 +30,27 @@ export function OverviewKPICards({ trustData }: { trustData: NHSTrustData[] }) {
   const latestData = latestDataWithAE || trustData[trustData.length - 1];
 
   // Find previous record with A&E data for trend calculation
-  const previousDataWithAE = [...trustData].reverse().slice(1).find(record =>
+  const reversedData = [...trustData].reverse();
+  const latestIndex = latestDataWithAE ? reversedData.findIndex(record => record.period === latestDataWithAE.period) : -1;
+  const previousDataWithAE = latestIndex >= 0 ? reversedData.slice(latestIndex + 1).find(record =>
     record.ae_4hr_performance_pct !== null &&
     record.ae_4hr_performance_pct !== undefined &&
     record.ae_attendances_total !== null &&
     record.ae_attendances_total !== undefined
-  );
+  ) : null;
 
   const previousData = previousDataWithAE;
+
+
 
   const criticalDiagnostics = useMemo(() => {
     return calculateCriticalDiagnosticServices(latestData);
   }, [latestData]);
 
   const calculateTrend = (current: number, previous: number) => {
-    if (!previous) return { change: 0, direction: 'neutral' as const };
+    if (previous === null || previous === undefined) {
+      return { change: 0, direction: 'neutral' as const };
+    }
     const change = ((current - previous) / previous) * 100;
     return {
       change: Math.abs(change),
@@ -129,7 +135,7 @@ export function OverviewKPICards({ trustData }: { trustData: NHSTrustData[] }) {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {kpiCards.map((kpi) => {
         const status = kpi.value !== undefined && kpi.value !== null ? kpi.getStatus(kpi.value) : 'no-data';
-        const trend = kpi.previousValue && kpi.value ? calculateTrend(kpi.value, kpi.previousValue) : null;
+        const trend = (kpi.previousValue !== null && kpi.previousValue !== undefined && kpi.value !== null && kpi.value !== undefined) ? calculateTrend(kpi.value, kpi.previousValue) : null;
         const colorClass = getStatusColor(status);
 
         return (

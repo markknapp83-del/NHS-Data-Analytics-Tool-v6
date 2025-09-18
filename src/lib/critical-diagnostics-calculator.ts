@@ -19,6 +19,16 @@ export function calculateCriticalDiagnosticServices(trustData: NHSTrustData): {
     { key: 'ultrasound', name: 'Ultrasound' },
     { key: 'gastroscopy', name: 'Gastroscopy' },
     { key: 'echocardiography', name: 'Echocardiography' },
+    { key: 'colonoscopy', name: 'Colonoscopy' },
+    { key: 'sigmoidoscopy', name: 'Sigmoidoscopy' },
+    { key: 'cystoscopy', name: 'Cystoscopy' },
+    { key: 'nuclear_medicine', name: 'Nuclear Medicine' },
+    { key: 'dexa', name: 'DEXA Scans' },
+    { key: 'audiology', name: 'Audiology' },
+    { key: 'electrophysiology', name: 'Electrophysiology' },
+    { key: 'neurophysiology', name: 'Neurophysiology' },
+    { key: 'sleep_studies', name: 'Sleep Studies' },
+    { key: 'urodynamics', name: 'Urodynamics' }
   ];
 
   const criticalServices: CriticalDiagnosticService[] = [];

@@ -42,51 +42,49 @@ export function RTTFilters({
   return (
     <Card className="mb-2">
       <CardContent className="px-4 py-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="h-3 w-3 text-slate-600" />
-            <span className="text-xs font-medium text-slate-700">Filters</span>
+            <span className="text-xs font-medium text-slate-700">Filters:</span>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Specialty Filter - Inline */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="specialty-select" className="text-xs text-slate-600 whitespace-nowrap">
-                Specialty:
-              </Label>
-              <Select value={selectedSpecialty} onValueChange={onSpecialtyChange}>
-                <SelectTrigger id="specialty-select" className="h-7 w-40 text-xs">
-                  <SelectValue placeholder="Select specialty" />
-                </SelectTrigger>
-                <SelectContent>
-                  {specialties.map((specialty) => (
-                    <SelectItem key={specialty.value} value={specialty.value}>
-                      {specialty.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Specialty Filter - Left side */}
+          <div className="flex items-center gap-2">
+            <Label htmlFor="specialty-select" className="text-xs text-slate-600 whitespace-nowrap">
+              Specialty:
+            </Label>
+            <Select value={selectedSpecialty} onValueChange={onSpecialtyChange}>
+              <SelectTrigger id="specialty-select" className="h-7 w-40 text-xs">
+                <SelectValue placeholder="Select specialty" />
+              </SelectTrigger>
+              <SelectContent>
+                {specialties.map((specialty) => (
+                  <SelectItem key={specialty.value} value={specialty.value}>
+                    {specialty.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Date Range Filter - Inline */}
-            <div className="flex items-center gap-2">
-              <Label htmlFor="date-range-select" className="text-xs text-slate-600 whitespace-nowrap">
-                Date Range:
-              </Label>
-              <Select value={selectedDateRange} onValueChange={onDateRangeChange}>
-                <SelectTrigger id="date-range-select" className="h-7 w-36 text-xs">
-                  <CalendarIcon className="h-3 w-3 mr-1" />
-                  <SelectValue placeholder="Select range" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDateRanges.map((range) => (
-                    <SelectItem key={range.value} value={range.value}>
-                      {range.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Date Range Filter - Left side */}
+          <div className="flex items-center gap-2">
+            <Label htmlFor="date-range-select" className="text-xs text-slate-600 whitespace-nowrap">
+              Date Range:
+            </Label>
+            <Select value={selectedDateRange} onValueChange={onDateRangeChange}>
+              <SelectTrigger id="date-range-select" className="h-7 w-36 text-xs">
+                <CalendarIcon className="h-3 w-3 mr-1" />
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableDateRanges.map((range) => (
+                  <SelectItem key={range.value} value={range.value}>
+                    {range.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardContent>
