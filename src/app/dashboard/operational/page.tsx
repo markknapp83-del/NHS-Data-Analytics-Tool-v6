@@ -1,18 +1,26 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useNHSData } from '@/hooks/use-nhs-data';
 import { useTrustSelection } from '@/hooks/use-trust-selection';
-import { Activity, Clock, Users, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Activity, Clock, Users, AlertTriangle, TrendingUp, TrendingDown, Stethoscope } from 'lucide-react';
 import { AEPerformanceChart } from '@/components/charts/ae-performance-chart';
 import { DiagnosticsSummaryChart } from '@/components/charts/diagnostics-summary-chart';
+import { EnhancedKPICard } from '@/components/dashboard/enhanced-kpi-card';
+import { calculateTrend, findPreviousMonthData } from '@/lib/trend-calculator';
 
 export default function OperationalPage() {
   const { getTrustData, isLoading } = useNHSData();
   const [selectedTrust] = useTrustSelection();
   const trustData = getTrustData(selectedTrust);
+
+  // All hooks must be called before any conditional returns
+  const previousMonthData = useMemo(() => {
+    return findPreviousMonthData(trustData);
+  }, [trustData]);
 
   if (isLoading) {
     return (
@@ -63,42 +71,6 @@ export default function OperationalPage() {
 
   const previousData = previousDataWithAE;
 
-  // A&E Performance Metrics
-  const aeMetrics = [
-    {
-      title: 'A&E 4-hour Performance',
-      value: latestData.ae_4hr_performance_pct || 0, // Already stored as percentage
-      previousValue: previousData?.ae_4hr_performance_pct,
-      target: 95,
-      format: 'percentage',
-      icon: Clock,
-      description: 'Target: 95%'
-    },
-    {
-      title: 'Total Attendances',
-      value: latestData.ae_attendances_total || 0,
-      previousValue: previousData?.ae_attendances_total,
-      format: 'number',
-      icon: Users,
-      description: 'Monthly attendances'
-    },
-    {
-      title: 'Over 4 Hours',
-      value: latestData.ae_over_4hrs_total || 0,
-      previousValue: previousData?.ae_over_4hrs_total,
-      format: 'number',
-      icon: AlertTriangle,
-      description: 'Breached 4-hour target'
-    },
-    {
-      title: 'Emergency Admissions',
-      value: latestData.ae_emergency_admissions_total || 0,
-      previousValue: previousData?.ae_emergency_admissions_total,
-      format: 'number',
-      icon: Activity,
-      description: 'Admitted via A&E'
-    }
-  ];
 
   // Diagnostics types - simplified list based on common NHS diagnostics
   const diagnosticTypes = [
@@ -112,22 +84,6 @@ export default function OperationalPage() {
     { key: 'cystoscopy', name: 'Cystoscopy' }
   ];
 
-  const calculateTrend = (current: number, previous: number) => {
-    if (!previous || previous === 0) return null;
-    const change = ((current - previous) / previous) * 100;
-    return {
-      change: Math.abs(change).toFixed(1),
-      direction: change > 0 ? 'up' : 'down' as const,
-      isPositive: change > 0
-    };
-  };
-
-  const getPerformanceColor = (value: number, target: number) => {
-    const ratio = value / target;
-    if (ratio >= 1) return 'text-green-600';
-    if (ratio >= 0.8) return 'text-yellow-600';
-    return 'text-red-600';
-  };
 
   return (
     <div className="p-6 space-y-6">
@@ -151,42 +107,62 @@ export default function OperationalPage() {
       <div>
         <h2 className="text-lg font-semibold mb-4">Emergency Department Performance</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {aeMetrics.map((metric) => {
-            const trend = metric.previousValue ? calculateTrend(metric.value, metric.previousValue) : null;
-            const performanceColor = metric.target ?
-              getPerformanceColor(metric.value, metric.target) :
-              'text-slate-900';
+          <EnhancedKPICard
+            title="A&E 4-hour Performance"
+            value={latestData.ae_4hr_performance_pct || 0}
+            previousValue={previousMonthData?.ae_4hr_performance_pct}
+            symbol={Clock}
+            format="percentage"
+            target={95}
+            description="Target: 95%"
+            trend={previousMonthData ? calculateTrend(
+              latestData.ae_4hr_performance_pct || 0,
+              previousMonthData.ae_4hr_performance_pct || 0,
+              true
+            ) : undefined}
+          />
 
-            return (
-              <Card key={metric.title}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <metric.icon className="h-5 w-5 text-[#005eb8]" />
-                    {trend && (
-                      <div className="flex items-center gap-1">
-                        {trend.direction === 'up' ? (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 text-red-600" />
-                        )}
-                        <span className="text-sm text-slate-600">{trend.change}%</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-600">{metric.title}</p>
-                    <p className={`text-2xl font-bold ${performanceColor}`}>
-                      {metric.format === 'percentage'
-                        ? `${metric.value.toFixed(1)}%`
-                        : metric.value.toLocaleString()
-                      }
-                    </p>
-                    <p className="text-xs text-slate-500">{metric.description}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          <EnhancedKPICard
+            title="Total Attendances"
+            value={latestData.ae_attendances_total || 0}
+            previousValue={previousMonthData?.ae_attendances_total}
+            symbol={Users}
+            format="number"
+            description="Monthly attendances"
+            trend={previousMonthData ? calculateTrend(
+              latestData.ae_attendances_total || 0,
+              previousMonthData.ae_attendances_total || 0,
+              false
+            ) : undefined}
+          />
+
+          <EnhancedKPICard
+            title="Over 4 Hours"
+            value={latestData.ae_over_4hrs_total || 0}
+            previousValue={previousMonthData?.ae_over_4hrs_total}
+            symbol={AlertTriangle}
+            format="number"
+            description="Breached 4-hour target"
+            trend={previousMonthData ? calculateTrend(
+              latestData.ae_over_4hrs_total || 0,
+              previousMonthData.ae_over_4hrs_total || 0,
+              false
+            ) : undefined}
+          />
+
+          <EnhancedKPICard
+            title="Emergency Admissions"
+            value={latestData.ae_emergency_admissions_total || 0}
+            previousValue={previousMonthData?.ae_emergency_admissions_total}
+            symbol={Activity}
+            format="number"
+            description="Admitted via A&E"
+            trend={previousMonthData ? calculateTrend(
+              latestData.ae_emergency_admissions_total || 0,
+              previousMonthData.ae_emergency_admissions_total || 0,
+              false
+            ) : undefined}
+          />
         </div>
       </div>
 

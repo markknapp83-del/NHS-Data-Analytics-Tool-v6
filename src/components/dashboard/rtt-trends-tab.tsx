@@ -7,10 +7,18 @@ import { WaitingListChart } from '@/components/charts/waiting-list-chart';
 import { AverageWaitChart } from '@/components/charts/average-wait-chart';
 import { BreachBreakdownChart } from '@/components/charts/breach-breakdown-chart';
 
-export function RTTTrendsTab() {
+interface RTTTrendsTabProps {
+  selectedSpecialty?: string;
+  filteredData?: any[];
+}
+
+export function RTTTrendsTab({ selectedSpecialty = 'trust_total', filteredData }: RTTTrendsTabProps) {
   const { getTrustData } = useNHSData();
   const [selectedTrust] = useTrustSelection();
-  const trustData = getTrustData(selectedTrust);
+  const rawTrustData = getTrustData(selectedTrust);
+
+  // Use filtered data if provided, otherwise use all trust data
+  const trustData = filteredData || rawTrustData;
 
   if (!trustData.length) {
     return <div>Loading trust data...</div>;
@@ -93,9 +101,9 @@ export function RTTTrendsTab() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Updated KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpiCards.map((kpi) => {
           const trend = kpi.previousValue ? calculateTrend(kpi.value, kpi.previousValue) : null;
           const performanceColor = kpi.target ?
@@ -134,7 +142,7 @@ export function RTTTrendsTab() {
       </div>
 
       {/* 2x2 Chart Grid - Same as current overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardTitle>Performance vs 92% Target</CardTitle>
